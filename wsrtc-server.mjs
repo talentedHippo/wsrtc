@@ -62,7 +62,7 @@ class Room {
     this.state = null;
 
     this.unbindStateFn = null;
-    
+
     const newState = new Z.Doc();
     if (initialState) {
       _setDocFromObject(newState, initialState);
@@ -77,11 +77,11 @@ class Room {
   }
   bindState(nextState) {
     this.unbindState();
-    
+
     this.state = nextState;
     nextState.setMirror(true);
     nextState.setResolvePriority(0);
-    
+
     const stateUpdateFn = (encodedUpdate, transactionOrigin) => {
       let encodedMessage = encodeMessage([
         MESSAGE.STATE_UPDATE,
@@ -95,7 +95,7 @@ class Room {
       }
     };
     this.state.on('update', stateUpdateFn);
-    
+
     this.unbindStateFn = () => {
       this.state.off('update', stateUpdateFn);
     };
@@ -109,7 +109,7 @@ class Room {
   removePlayer(playerId) {
     this.state.transact(() => {
       const players = this.getPlayersState();
-      
+
       let playerIndex = -1;
       for (let i = 0; i < players.length; i++) {
         const player = players.get(i);
@@ -144,7 +144,7 @@ class Room {
   }
   destroy() {
     this.unbindState();
-    
+
     for (const player of this.players) {
       player.ws.terminate();
     }
@@ -161,9 +161,10 @@ const bindServer = (server, {initialRoomState = null, initialRoomNames = []} = [
     }
     return room;
   };
-  
+
   const wss = new WebSocketServer({
-    noServer: true,
+    port: 3001,
+    path: "/ws/"
   });
   wss.on('connection', (ws, req) => {
     const o = url.parse(req.url, true);
@@ -172,9 +173,9 @@ const bindServer = (server, {initialRoomState = null, initialRoomNames = []} = [
     const {playerId} = o.query;
     if (roomId && playerId) {
       const room = _getOrCreateRoom(roomId);
-      
+
       console.log('got connection', o.query, o.queryString);
-      
+
       // const id = Math.floor(Math.random() * 0xFFFFFF);
       const localPlayer = new Player(playerId, ws);
       room.players.push(localPlayer);
@@ -182,7 +183,7 @@ const bindServer = (server, {initialRoomState = null, initialRoomNames = []} = [
       ws.addEventListener('close', () => {
         room.removePlayer(playerId);
       });
-      
+
       // send init
       const encodedStateData = Z.encodeStateAsUpdate(room.state);
       console.log('encoded state data', encodedStateData.byteLength);
@@ -190,7 +191,7 @@ const bindServer = (server, {initialRoomState = null, initialRoomNames = []} = [
         MESSAGE.INIT,
         encodedStateData,
       ]);
-      
+
       ws.addEventListener('message', (e) => {
         const dataView = new DataView(e.data.buffer, e.data.byteOffset);
         const method = dataView.getUint32(0, true);
@@ -218,11 +219,11 @@ const bindServer = (server, {initialRoomState = null, initialRoomNames = []} = [
 
   server.on('request', (req, res) => {
     console.log('ws got req', req.method, req.url);
-    
+
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', '*');
     res.setHeader('Access-Control-Allow-Headers', '*');
-    
+
     if (req.method === 'HEAD' || req.method === 'OPTIONS') {
       res.end();
     } else {
@@ -258,11 +259,11 @@ const bindServer = (server, {initialRoomState = null, initialRoomNames = []} = [
               bs.length = 0;
               const s = b.toString('utf8');
               const j = _jsonParse(s);
-              
+
               if (Array.isArray(j?.apps)) {
                 const room = _getOrCreateRoom(roomName);
                 room.setApps(j?.apps);
-                
+
                 res.setHeader('Content-Type', 'application/json');
                 res.end(JSON.stringify({ok: true}));
               } else {
@@ -279,7 +280,7 @@ const bindServer = (server, {initialRoomState = null, initialRoomNames = []} = [
           if (room) {
             rooms.delete(roomName);
             room.destroy();
-            
+
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ok: true}));
           } else {
@@ -298,7 +299,7 @@ const bindServer = (server, {initialRoomState = null, initialRoomNames = []} = [
       wss.emit('connection', ws, req);
     });
   });
-  
+
   for (const name of initialRoomNames) {
     _getOrCreateRoom(name);
   }
