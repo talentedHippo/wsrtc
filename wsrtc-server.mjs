@@ -163,8 +163,8 @@ const bindServer = (server, {initialRoomState = null, initialRoomNames = []} = [
   };
 
   const wss = new WebSocketServer({
-    port: 3001,
-    path: "/ws/"
+    path: "/ws/",
+    noServer: true
   });
   wss.on('connection', (ws, req) => {
     const o = url.parse(req.url, true);
