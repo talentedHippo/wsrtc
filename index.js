@@ -1,12 +1,10 @@
 require('dotenv').config();
 const fs = require('fs');
 const http = require('http');
-const https = require('https');
 const express = require('express');
 const wsrtcServer = require('./wsrtc-server.js');
 
 const httpPort = process.env.HTTP_PORT || 3000;
-const httpsPort = process.env.HTTPS_PORT || 3001;
 
 
 const app = express();
@@ -33,10 +31,10 @@ app.use(appStatic);
 
 const servers = [];
 
-const httpsServer = https.createServer({}, app)
-    .listen(httpsPort);
-servers.push(httpsServer);
-console.log('https://localhost:' + httpsPort);
+const httpServer = http.createServer({}, app)
+    .listen(httpPort);
+servers.push(httpServer);
+console.log('https://localhost:' + httpPort);
 for (const server of servers) {
   wsrtcServer.bindServer(server);
 }
